@@ -1,10 +1,12 @@
 import argparse
 import csv
 import json
+import re
 from calendar import monthrange
 from collections import Counter
 from datetime import date, timedelta
 from pathlib import Path
+from urllib.parse import urlsplit
 
 
 def reports(payload):
@@ -70,17 +72,36 @@ def latest_complete_window(observed, start, end):
     raise ValueError(f'No complete 24-month window was found between {start} and {end}.')
 
 
+def export_name(site, scope, start, end):
+    site = site.strip()
+    host = urlsplit(site if '://' in site else f'//{site}').hostname
+    if not host:
+        raise ValueError('Enter a website URL or a property label such as property-123.')
+    host = host.removeprefix('www.').encode('idna').decode('ascii').lower()
+    slug = re.sub(r'[^a-z0-9]+', '-', host).strip('-')[:100].rstrip('-')
+    if not slug:
+        raise ValueError('Enter a website URL or a property label such as property-123.')
+    scope_label = 'Homepage' if scope == 'homepage' else 'Sitewide'
+    return f'{slug}_GA4_Google-Organic_{scope_label}_{start}_to_{end}.csv'
+
+
 def main():
     parser = argparse.ArgumentParser(description='Export Google organic daily sessions from complete GA4 reports.')
     parser.add_argument('--start', required=True, type=date.fromisoformat)
     parser.add_argument('--end', required=True, type=date.fromisoformat)
-    parser.add_argument('--output', required=True, type=Path)
+    output_options = parser.add_mutually_exclusive_group()
+    output_options.add_argument('--output', type=Path, help='Write to a specific filename.')
+    output_options.add_argument('--output-dir', type=Path, help='Save the automatically named CSV here.')
+    parser.add_argument('--site', help='Website URL or property label used in the filename.')
+    parser.add_argument('--scope', choices=['sitewide', 'homepage'], default='sitewide')
     parser.add_argument('--latest-complete-window', action='store_true',
                         help='Export only the newest 24 consecutive complete months in the queried range.')
     parser.add_argument('reports', nargs='+', type=Path)
     args = parser.parse_args()
     if args.end < args.start:
         parser.error('The end date must be on or after the start date.')
+    if args.output is None and not args.site:
+        parser.error('Supply --site for automatic naming or give a filename with --output.')
     try:
         observed = collect(args.reports, args.start, args.end)
         if not observed:
@@ -89,7 +110,11 @@ def main():
         if args.latest_complete_window:
             start, end = latest_complete_window(observed, start, end)
             observed = {day: sessions for day, sessions in observed.items() if start <= day <= end}
-        with args.output.open('x', encoding='utf-8', newline='') as handle:
+        output = args.output
+        if output is None:
+            output_dir = args.output_dir or Path('.')
+            output = output_dir / export_name(args.site, args.scope, start, end)
+        with output.open('x', encoding='utf-8', newline='') as handle:
             writer = csv.writer(handle)
             writer.writerow(['Date', 'Sessions', 'Session source / medium'])
             for day, sessions in sorted(observed.items()):
@@ -97,7 +122,7 @@ def main():
     except (ValueError, TypeError, KeyError, OSError) as error:
         parser.exit(1, f'{error}\n')
     missing = (end - start).days + 1 - len(observed)
-    print(f'{args.output}: {start} to {end}, {len(observed)} daily rows, {missing} missing days.')
+    print(f'{output}: {start} to {end}, {len(observed)} daily rows, {missing} missing days.')
 
 
 if __name__ == '__main__':
