@@ -21,3 +21,5 @@ Use $firstpage-ga4-export with my connected First Page MCP. Find the newest 24 c
 ```
 
 The skill looks back when the latest months have missing days. Include start and end dates in your request if you prefer to export a specific period. Upload the generated CSV in Traffic Forecasting under Organic forecast.
+
+Export speed depends on the connector. Server-side filtering or access to the complete response lets the skill fetch larger date ranges. When only inline results are available, the skill sizes each request using the site's observed row count and reuses completed chunks during retries.
