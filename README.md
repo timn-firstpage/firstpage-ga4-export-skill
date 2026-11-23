@@ -17,7 +17,7 @@ You can also copy the `skills/firstpage-ga4-export` folder into your Codex skill
 Paste the following prompt in Codex. Add a website or GA4 property ID if you know it.
 
 ```text
-Use $firstpage-ga4-export with my connected First Page MCP. Export my site's daily google / organic sessions for the latest 24 complete calendar months. Save an upload-ready CSV with Date, Sessions, and Session source / medium, and return the file link. Ask me which GA4 property to use if it is unclear.
+Use $firstpage-ga4-export with my connected First Page MCP. Find the newest 24 consecutive complete months with daily google / organic sessions for my site. Save an upload-ready CSV with Date, Sessions, and Session source / medium. Return the file link and the dates you selected. Ask me which GA4 property to use if it is unclear.
 ```
 
-Upload the generated CSV in Traffic Forecasting under Organic forecast.
+The skill looks back when the latest months have missing days. Include start and end dates in your request if you prefer to export a specific period. Upload the generated CSV in Traffic Forecasting under Organic forecast.
